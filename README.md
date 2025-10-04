@@ -76,3 +76,46 @@ The application uses Supabase with the following tables:
 ## License
 
 MIT
+
+Setup Instructions
+1. Install Python Dependencies
+
+pip3 install -r requirements.txt
+This installs Flask, Bolt Database client, and other required packages.
+
+2. Verify Environment Variables
+Your .env file should already have:
+
+
+VITE_Bolt Database_URL=your_Bolt Database_url
+VITE_Bolt Database_ANON_KEY=your_Bolt Database_key
+3. Start the Application
+
+python3 app.py
+The app will run on http://localhost:5000
+
+4. What's Already Working
+✅ Database tables (profiles, conversations, messages, resources, crisis_mode)
+
+✅ Edge functions (chat, text-to-speech)
+
+✅ Row Level Security policies
+
+✅ All frontend pages (home, chat, resources, admin)
+
+5. Add Sample Data (Optional)
+To populate the resources library, run this SQL in Bolt Database:
+
+
+INSERT INTO resources (name, type, address, phone, website, services) VALUES
+('Social Security Office', 'Federal', '123 Main St, Washington DC', '1-800-772-1213', 'https://www.ssa.gov', ARRAY['Benefits', 'Retirement', 'Disability']),
+('VA Medical Center', 'Healthcare', '456 Veterans Blvd, DC', '1-800-827-1000', 'https://www.va.gov', ARRAY['Healthcare', 'Mental Health', 'Benefits']),
+('IRS Taxpayer Assistance', 'Federal', '789 Tax Ave, DC', '1-800-829-1040', 'https://www.irs.gov', ARRAY['Tax Help', 'Filing Assistance']);
+6. Test the Features
+Home: Navigate to landing page
+Chat: Test AI conversation (requires edge function to have AI integration)
+Resources: View and search resources
+Admin: View conversation statistics
+The application is production-ready except the chat AI logic needs to be implemented in the edge function at supabase/functions/chat/index.ts.
+
+
