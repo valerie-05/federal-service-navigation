@@ -1,0 +1,10 @@
+{
+  "name": "regen-python",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Python Flask app - run: python3 app.py'",
+    "build": "echo 'Python Flask app - no build required'",
+    "start": "python3 app.py"
+  }
+}

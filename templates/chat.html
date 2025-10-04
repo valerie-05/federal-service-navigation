@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - ReGen{% endblock %}
+
+{% block content %}
+<div class="px-4">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">Chat with ReGen</h1>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-4" style="height: 500px; overflow-y: auto;" id="chatMessages">
+            <div class="p-6 space-y-4">
+                <div class="flex items-start">
+                    <div class="bg-blue-100 rounded-lg p-4 max-w-xl">
+                        <p class="text-sm text-gray-800">Hello! I'm ReGen, your AI assistant for navigating federal systems and resources. How can I help you today?</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <form id="chatForm" class="flex gap-2">
+                <input
+                    type="text"
+                    id="messageInput"
+                    placeholder="Type your message..."
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                />
+                <button
+                    type="submit"
+                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
+                    id="sendButton"
+                >
+                    Send
+                </button>
+            </form>
+        </div>
+
+        <div class="mt-4 flex gap-2">
+            <button
+                id="ttsButton"
+                class="text-sm bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition disabled:bg-gray-300"
+                disabled
+            >
+                🔊 Read Last Message
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let lastAiMessage = '';
+
+    document.getElementById('chatForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatMessages = document.getElementById('chatMessages');
+        const message = messageInput.value.trim();
+
+        if (!message) return;
+
+        sendButton.disabled = true;
+        sendButton.textContent = 'Sending...';
+
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'flex items-start justify-end p-3';
+        userMessageDiv.innerHTML = `
+            <div class="bg-blue-600 text-white rounded-lg p-4 max-w-xl">
+                <p class="text-sm">${escapeHtml(message)}</p>
+            </div>
+        `;
+        chatMessages.querySelector('.space-y-4').appendChild(userMessageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        messageInput.value = '';
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message }),
+            });
+
+            const data = await response.json();
+
+            const aiMessageDiv = document.createElement('div');
+            aiMessageDiv.className = 'flex items-start p-3';
+            aiMessageDiv.innerHTML = `
+                <div class="bg-blue-100 rounded-lg p-4 max-w-xl">
+                    <p class="text-sm text-gray-800">${escapeHtml(data.response || data.message || 'I received your message.')}</p>
+                </div>
+            `;
+            chatMessages.querySelector('.space-y-4').appendChild(aiMessageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            lastAiMessage = data.response || data.message || '';
+            document.getElementById('ttsButton').disabled = false;
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to send message. Please try again.');
+        } finally {
+            sendButton.disabled = false;
+            sendButton.textContent = 'Send';
+        }
+    });
+
+    document.getElementById('ttsButton').addEventListener('click', async () => {
+        if (!lastAiMessage) return;
+
+        const ttsButton = document.getElementById('ttsButton');
+        ttsButton.disabled = true;
+        ttsButton.textContent = '🔊 Processing...';
+
+        try {
+            const response = await fetch('/api/tts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: lastAiMessage }),
+            });
+
+            const data = await response.json();
+
+            if (data.audioUrl) {
+                const audio = new Audio(data.audioUrl);
+                audio.play();
+            } else {
+                alert('Text-to-speech is not yet configured.');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to generate speech. Please try again.');
+        } finally {
+            ttsButton.disabled = false;
+            ttsButton.textContent = '🔊 Read Last Message';
+        }
+    });
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - ReGen{% endblock %}
+
+{% block content %}
+<div class="px-4">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-500">Total Conversations</h3>
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-gray-900" id="totalConversations">0</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-500">Active Users</h3>
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-gray-900" id="activeUsers">0</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-500">Resources</h3>
+                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-gray-900" id="totalResources">0</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Recent Conversations</h2>
+        </div>
+        <div class="p-6">
+            <div id="conversationsTable" class="overflow-x-auto">
+                <p class="text-gray-500 text-center py-8">Loading conversations...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadDashboardData() {
+        try {
+            const conversationsResponse = await fetch('/api/conversations');
+            const conversations = await conversationsResponse.json();
+
+            document.getElementById('totalConversations').textContent = conversations.length;
+
+            const uniqueUsers = new Set(conversations.map(c => c.user_id).filter(Boolean));
+            document.getElementById('activeUsers').textContent = uniqueUsers.size;
+
+            const resourcesResponse = await fetch('/api/resources');
+            const resources = await resourcesResponse.json();
+            document.getElementById('totalResources').textContent = resources.length;
+
+            displayConversations(conversations);
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+            document.getElementById('conversationsTable').innerHTML = `
+                <p class="text-red-500 text-center py-8">Failed to load data. Please try again later.</p>
+            `;
+        }
+    }
+
+    function displayConversations(conversations) {
+        const container = document.getElementById('conversationsTable');
+
+        if (conversations.length === 0) {
+            container.innerHTML = `
+                <p class="text-gray-500 text-center py-8">No conversations yet.</p>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">ID</th>
+                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">User</th>
+                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
+                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Messages</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${conversations.slice(0, 10).map(conv => `
+                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="py-3 px-4 text-sm text-gray-900">${escapeHtml(conv.id.substring(0, 8))}...</td>
+                            <td class="py-3 px-4 text-sm text-gray-900">${escapeHtml(conv.user_id ? conv.user_id.substring(0, 8) + '...' : 'Anonymous')}</td>
+                            <td class="py-3 px-4 text-sm text-gray-500">${new Date(conv.created_at).toLocaleDateString()}</td>
+                            <td class="py-3 px-4 text-sm text-gray-500">${conv.messages ? JSON.parse(conv.messages).length : 0}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.toString().replace(/[&<>"']/g, m => map[m]);
+    }
+
+    loadDashboardData();
+</script>
+{% endblock %}

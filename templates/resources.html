@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Resources - ReGen{% endblock %}
+
+{% block content %}
+<div class="px-4">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Resource Library</h1>
+
+    <div class="mb-6">
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Search resources..."
+            class="w-full max-w-2xl px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+    </div>
+
+    <div id="resourcesContainer" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="text-center py-12 col-span-full">
+            <p class="text-gray-500">Loading resources...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allResources = [];
+
+    async function loadResources() {
+        try {
+            const response = await fetch('/api/resources');
+            const resources = await response.json();
+            allResources = resources;
+            displayResources(resources);
+        } catch (error) {
+            console.error('Error loading resources:', error);
+            document.getElementById('resourcesContainer').innerHTML = `
+                <div class="text-center py-12 col-span-full">
+                    <p class="text-red-500">Failed to load resources. Please try again later.</p>
+                </div>
+            `;
+        }
+    }
+
+    function displayResources(resources) {
+        const container = document.getElementById('resourcesContainer');
+
+        if (resources.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12 col-span-full">
+                    <p class="text-gray-500">No resources found.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = resources.map(resource => `
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
+                <div class="flex items-start justify-between mb-3">
+                    <h3 class="text-xl font-semibold text-gray-900">${escapeHtml(resource.title)}</h3>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">${escapeHtml(resource.category || 'General')}</span>
+                </div>
+                <p class="text-gray-600 mb-4">${escapeHtml(resource.description || '')}</p>
+                ${resource.url ? `
+                    <a href="${escapeHtml(resource.url)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        Learn More →
+                    </a>
+                ` : ''}
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filtered = allResources.filter(resource =>
+            resource.title.toLowerCase().includes(searchTerm) ||
+            (resource.description && resource.description.toLowerCase().includes(searchTerm)) ||
+            (resource.category && resource.category.toLowerCase().includes(searchTerm))
+        );
+        displayResources(filtered);
+    });
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    loadResources();
+</script>
+{% endblock %}
