@@ -17,12 +17,12 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { message } = await req.json();
+    const { message, language = 'en' } = await req.json();
 
     if (!message) {
       return new Response(
         JSON.stringify({ error: 'Message is required' }),
-        { 
+        {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
@@ -32,12 +32,28 @@ Deno.serve(async (req: Request) => {
     if (!GEMINI_API_KEY) {
       return new Response(
         JSON.stringify({ error: 'Gemini API key not configured' }),
-        { 
+        {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
+
+    const languageNames: Record<string, string> = {
+      'en': 'English',
+      'es': 'Spanish',
+      'zh': 'Chinese',
+      'ar': 'Arabic',
+      'fr': 'French',
+      'ru': 'Russian',
+      'pt': 'Portuguese',
+      'hi': 'Hindi'
+    };
+
+    const targetLanguage = languageNames[language] || 'English';
+    const languageInstruction = language !== 'en'
+      ? `IMPORTANT: You MUST respond in ${targetLanguage}. Every word of your response must be in ${targetLanguage}, not English.\n\n`
+      : '';
 
     // Call Google Gemini API
     const geminiResponse = await fetch(
@@ -50,7 +66,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are a helpful assistant for navigating federal services. Help users find information about government programs, benefits, and services. Be concise, accurate, and helpful.\n\nUser: ${message}`
+              text: `${languageInstruction}You are a helpful assistant for navigating federal services. Help users find information about government programs, benefits, and services. Be concise, accurate, and helpful.\n\nUser: ${message}`
             }]
           }],
           generationConfig: {

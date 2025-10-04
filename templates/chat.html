@@ -52,6 +52,7 @@
 {% block scripts %}
 <script>
     let lastAiMessage = '';
+    let selectedLanguage = localStorage.getItem('selectedLanguage') || 'en';
 
     document.getElementById('chatForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -62,6 +63,8 @@
         const message = messageInput.value.trim();
 
         if (!message) return;
+
+        selectedLanguage = localStorage.getItem('selectedLanguage') || 'en';
 
         sendButton.disabled = true;
         sendButton.textContent = 'Sending...';
@@ -84,7 +87,7 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message }),
+                body: JSON.stringify({ message, language: selectedLanguage }),
             });
 
             const data = await response.json();
@@ -117,27 +120,41 @@
         ttsButton.disabled = true;
         ttsButton.textContent = '🔊 Processing...';
 
-        try {
-            const response = await fetch('/api/tts', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text: lastAiMessage }),
-            });
+        selectedLanguage = localStorage.getItem('selectedLanguage') || 'en';
 
-            const data = await response.json();
+        const languageVoiceMap = {
+            'en': 'en-US',
+            'es': 'es-ES',
+            'zh': 'zh-CN',
+            'ar': 'ar-SA',
+            'fr': 'fr-FR',
+            'ru': 'ru-RU',
+            'pt': 'pt-BR',
+            'hi': 'hi-IN'
+        };
 
-            if (data.audioUrl) {
-                const audio = new Audio(data.audioUrl);
-                audio.play();
-            } else {
-                alert('Text-to-speech is not yet configured.');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to generate speech. Please try again.');
-        } finally {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(lastAiMessage);
+            utterance.lang = languageVoiceMap[selectedLanguage] || 'en-US';
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+
+            utterance.onend = () => {
+                ttsButton.disabled = false;
+                ttsButton.textContent = '🔊 Read Last Message';
+            };
+
+            utterance.onerror = (error) => {
+                console.error('Speech synthesis error:', error);
+                ttsButton.disabled = false;
+                ttsButton.textContent = '🔊 Read Last Message';
+            };
+
+            window.speechSynthesis.speak(utterance);
+        } else {
+            alert('Text-to-speech is not supported in your browser.');
             ttsButton.disabled = false;
             ttsButton.textContent = '🔊 Read Last Message';
         }

@@ -33,6 +33,7 @@ def admin():
 def chat_message():
     data = request.json
     message = data.get('message', '')
+    language = data.get('language', 'en')
 
     try:
         response = requests.post(
@@ -41,7 +42,7 @@ def chat_message():
                 'Authorization': f'Bearer {supabase_key}',
                 'Content-Type': 'application/json'
             },
-            json={'message': message}
+            json={'message': message, 'language': language}
         )
         return jsonify(response.json())
     except Exception as e:
@@ -51,6 +52,7 @@ def chat_message():
 def text_to_speech():
     data = request.json
     text = data.get('text', '')
+    language = data.get('language', 'en')
 
     try:
         response = requests.post(
@@ -59,7 +61,7 @@ def text_to_speech():
                 'Authorization': f'Bearer {supabase_key}',
                 'Content-Type': 'application/json'
             },
-            json={'text': text}
+            json={'text': text, 'language': language}
         )
         return jsonify(response.json())
     except Exception as e:
